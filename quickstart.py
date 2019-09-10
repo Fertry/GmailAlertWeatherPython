@@ -1,11 +1,16 @@
+###################################################################################
+###################################################################################
+#ALEJANDRO FDEZ - fertry.tech
+###################################################################################
+###################################################################################
+
 from __future__ import print_function
 import pickle
 import os.path
-from googleapiclient.discovery import build
+from googleapiclient import discovery
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
-# Librerias de Adafruit y otras:
 import Adafruit_GPIO.SPI as SPI
 import Adafruit_SSD1306
 
@@ -19,104 +24,52 @@ import time
 import datetime
 import pyowm
 
-# Hemos añadido esta libreria para los posibles errores:
-import httplib2
-
 # Variables editables rapidamente:
 GMAIL_QUERY = "in:inbox is:unread"
-EMAIL_ADDRESS = "youremail@gmail.com"
-TEXT = "Sin leer: "
+EMAIL_ADDRESS = "NUESTRO_EMAIL"
+TEXT = "Sin leer"
 DELAY_TIME = 10 
 SCREENSAVER_TIME_BEGIN = "00:00:00" 
 SCREENSAVER_TIME_END = "07:30:00"
-OPEN_WEATHER_MAP_API_KEY = "NUESTRA API"
+OPEN_WEATHER_MAP_API_KEY = "API DE OPEN_WEATHER_MAP"
 OPEN_WEATHER_MAP_LOCATION = "seville,es"
 OPEN_WEATHER_MAP_TEMP_SCALE = "celsius"
 
-# Configuracion de pins de la Raspberry:
-# Este pin no se usa.
-RST = None    
-
-# Tipo de pantalla:
+# Tipo de pantalla e inicialización de la misma:
+RST = None  # Este pin no se usa.
 display = Adafruit_SSD1306.SSD1306_128_64(rst = RST) 
-
-# Inicializamos la pantalla:
 display.begin()
 display.clear()
 display.display()
 
-# Creamos una imagen en "blanco" para dibujar:
+# Creamos una imagen en "blanco" para dibujar y
+# un rectangulo negro para llenar la pantalla:
 width = display.width
 height = display.height
 image = Image.new('1', (width, height))
 draw = ImageDraw.Draw(image)
-
-# Creamos un rectangulo negro para llenar la pantalla:
 draw.rectangle((0,0,width,height), outline = 0, fill = 0)
 
-# Fuente que usaremos para escribir:
+# Fuentes que usaremos para escribir:
 font = ImageFont.truetype("Arial.ttf", 16)
 font_email = ImageFont.truetype("Arial.ttf", 11)
-font_sky = ImageFont.truetype("Arial", 12)
+font_sky = ImageFont.truetype("Arial.ttf", 12)
 
-# Constantes:
+# Constantes para la posicion en pantalla:
 padding = -2
 top = padding
 bottom = height - padding
 x = 0
 
-# IP de la Raspberry:
+# IP de la Raspberry formateado con re:
 cmd = "hostname -I | cut -d\' \' -f1"
 IP = subprocess.check_output(cmd, shell = True )
 IP = re.search( r'[0-9]+(?:\.[0-9]+){3}', str(IP) ).group()
 
-# Creamos una instacion de pyowm y le pasamos nuestra API:
-owm = pyowm.OWM(OPEN_WEATHER_MAP_API_KEY) 
-
-# Obtenemos los datos para nuestra ubicacion:
-observation = owm.weather_at_place(OPEN_WEATHER_MAP_LOCATION)
-w = observation.get_weather()
-
-# Obtenemos la temperatura (importante el redondeo):
-temperature = round(w.get_temperature(OPEN_WEATHER_MAP_TEMP_SCALE)['temp'])
-
-# Obtenemos la informacion del tiempo:
-sky = w.get_detailed_status()
-
-# Almacenamos el tiempo de mañana:
-tomorrows_sky = ''
-tomorrows_temp = ''
-
-# Actualizamos el tiempo actual:
-current_time = datetime.datetime.now()
-current_time_adjusted = current_time + datetime.timedelta(days =+ 1)
-
-# Obtenemos la prevision para 3 dias:
-prevision_3_dias = owm.three_hours_forecast(OPEN_WEATHER_MAP_LOCATION)
-prevision = prevision_3_dias.get_forecast()
-
-for weather in prevision:
-    
-  ref_time = weather.get_reference_time('date').replace(tzinfo = None)
-  compare = current_time_adjusted > ref_time
-    
-  if (compare is False):
-        
-    tomorrows_sky = weather.get_detailed_status()
-    tomorrows_temp = round(weather.get_temperature(OPEN_WEATHER_MAP_TEMP_SCALE)['temp'])
-    print(weather.get_temperature(OPEN_WEATHER_MAP_TEMP_SCALE))
-    print("tomorrows_sky", tomorrows_sky)
-    print("tomorrows_temp", tomorrows_temp)
-    print("weather.get_reference_time('iso')", weather.get_reference_time('iso'))
-    break
-
-print("Temperatura:", temperature)
-print("Estado:", sky)
-
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
 # Funcion contadora:
-def contadorMensajes(service, user_id, query = ''):
+def contadormessages(service, user_id, query = ''):
     
   """
   Cuenta el numero de emails que cumplen una condición.
@@ -130,41 +83,48 @@ def contadorMensajes(service, user_id, query = ''):
   Salida:
     *Numero de emails que cumplen dicha condición (query).
   """
+
+  ###################################################################################
+  ###################################################################################
+  #ESTE BLOQUE CORRESPONDE AL CONTADOR DE EMAILS NO LEIDOS
+  ###################################################################################
+  ###################################################################################
   
   try:
       
-    response = service.users().mensajes().list(userId = user_id, q = query).execute()
-    mensajes = []
+    response = service.users().messages().list(userId = user_id, q = query).execute()
+    messages = []
     
-    if 'mensajes' in response:
+    if 'messages' in response:
         
-      mensajes.extend(response['mensajes'])
+      messages.extend(response['messages'])
 
     while 'nextPageToken' in response:
         
       page_token = response['nextPageToken']
-      response = service.users().mensajes().list(userId = user_id, q = query, pageToken = page_token).execute()
-      mensajes.extend(response['mensajes'])
+      response = service.users().messages().list(userId = user_id, q = query, pageToken = page_token).execute()
+      messages.extend(response['messages'])
 
-    return mensajes
+    return messages
     
   except:
       
-    print('Ha ocurrido un error.')
+    print('Ha ocurrido un error')
 
 # Funcion principal:
 def main():
-    
-  """
-  Muestra el uso básico de la API de Gmail.
-  Enumera las etiquetas de Gmail del usuario.
-  """
-    
+  
+  ###################################################################################
+  ###################################################################################
+  #ESTE BLOQUE CORRESPONDE A LA AUTENTICACIÓN DEL USUARIO
+  ###################################################################################
+  ###################################################################################
+
   credenciales = None
     
   # El archivo token.pickle almacena los tokens de acceso y actualización del usuario, y es
   # creado automáticamente cuando se completa el proceso de autorización por primera vez.
-  # Hablaremos de esto luego.
+  # Documentacion: https://developers.google.com/gmail/api/quickstart/python
     
   if os.path.exists('token.pickle'):
         
@@ -184,80 +144,94 @@ def main():
       flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
       credenciales = flow.run_local_server(port = 0)
         
-      # Guarda las credenciales para la siguiente ejecución:
+    # Guarda las credenciales para la siguiente ejecución:
     with open('token.pickle', 'wb') as token:
             
       pickle.dump(credenciales, token)
     
-    # API de Gmail:
-  api = build('gmail', 'v1', credentials = credenciales)
+  # API de Gmail:
+  api = discovery.build('gmail', 'v1', credentials = credenciales)
 	
-  contador = len(contadorMensajes(api, "me", GMAIL_QUERY))
-  text_modified = TEXT
+  # Contador de emails no leidos:
+  contador = len(contadormessages(api, "me", GMAIL_QUERY))
 
-  if (int(contador) is 1 and TEXT.endswith('s')):
-    
-		text_modified = TEXT[:-1]
+  ###################################################################################
+  ###################################################################################
+  #ESTE BLOQUE CORRESPONDE A LA INFORMACION DEL TIEMPO
+  ###################################################################################
+  ###################################################################################
 
-	# Creamos un rectangulo negro para llenar la pantalla:
+  # Creamos una instacion de pyowm y le pasamos nuestra API:
+  owm = pyowm.OWM(OPEN_WEATHER_MAP_API_KEY) 
+
+  # Obtenemos los datos para nuestra ubicacion:
+  observation = owm.weather_at_place(OPEN_WEATHER_MAP_LOCATION)
+  w = observation.get_weather()
+
+  # Obtenemos la temperatura (importante el redondeo):
+  temperature = round(w.get_temperature(OPEN_WEATHER_MAP_TEMP_SCALE)['temp'])
+
+  # Obtenemos la informacion del tiempo:
+  sky = w.get_detailed_status()
+
+  ###################################################################################
+  ###################################################################################
+  #IMPRIMIMOS LOS DATOS EN CONSOLA PARA DEBUGGING
+  ###################################################################################
+  ###################################################################################
+
+  print("Temperatura:", temperature)
+  print("Estado:", sky)
+  print("Sin leer: ", contador)
+
+  ###################################################################################
+  ###################################################################################
+  #MOSTRAMOS LOS DATOS POR PANTALLA
+  ###################################################################################
+  ###################################################################################
+
+  # Creamos un rectangulo negro para llenar la pantalla:
   draw.rectangle((0,0,width,height), outline = 0, fill = 0)
 
-	# Dibujamos cada linea de texto que hemos definido antes:
-  draw.text((x, top), str(contador) + " " + text_modified, font = font, fill = 255)
-  draw.text((x, top + 19), str(temperature) + "°" + " / " + str(tomorrows_temp) + "°", font = font, fill = 255)
-  draw.text((x, top + 38), str(sky.title() + " / " + tomorrows_sky.title()), font = font_sky, fill = 255)
+  # Dibujamos cada linea de texto que hemos definido antes:
+  # El contador
+  # La temperatura
+  # El estado del tiempo
+  # La IP de la Raspberry
+  draw.text((x, top), str(contador) + " " + TEXT, font = font, fill = 255)
+  draw.text((x, top + 19), str(temperature) + "°", font = font, fill = 255)
+  draw.text((x, top + 38), str(sky.title()), font = font_sky, fill = 255)
   draw.text((x, top + 54), "IP: " + str(IP), font = font_email, fill = 255)
 
-	# Mostramos la imagen:
+  # Mostramos la imagen:
   display.image(image)
   display.display()
 
-	# Mostramos el contador en la consola:
-  print("Sin leer: ", contador)
+###################################################################################
+###################################################################################
+#BUCLE DEL PROGRAMA
+###################################################################################
+###################################################################################
 
 if __name__ == '__main__':
-    
-    # Ejecuta el script de forma indefinida hasta que encuentre un error:
-    
-	while True:
-	    
-		current_time = datetime.datetime.now()
-		
-		t1_begin = datetime.datetime.now()
-		t2_end = datetime.datetime.now()
 
-		t1_begin_list = SCREENSAVER_TIME_BEGIN.split(":") # "05:30:00" -> ["05", "30", "00"]
-		t2_end_list = SCREENSAVER_TIME_END.split(":") # "08:00:00" -> ["08", "00", "00"]
+  while True:
 
-		t1_begin = t1_begin.replace(hour = int(t1_begin_list[0]), minute = int(t1_begin_list[1]), second = int(t1_begin_list[2]))
-		t2_end = t2_end.replace(hour = int(t2_end_list[0]), minute = int(t2_end_list[1]), second = int(t2_end_list[2]))
+    if (datetime.datetime.now().hour >= 24 and datetime.datetime.now().hour <= 6):
 
-		time_delta = t2_end - t1_begin
+      try:
 
-		if (time_delta.total_seconds() < 0):
-		    
-			t2_end_adjusted = t2_end + datetime.timedelta(days =+ 1)
-			
-		else:
-		    
-			t2_end_adjusted = time_delta + t1_begin
+        main()
 
-		if (current_time <= t1_begin or current_time >= t2_end_adjusted):
-			
-			try:
+      except:
 
-				main()
-				
-			except:
+        print("Se encontro un error")
 
-				print("Se encontro un error")
+    else:
 
-		else:
+      draw.rectangle((0,0, width, height), outline = 0, fill = 0)
+      display.image(image)
+      display.display()
+      print("Durmiendo.....")
 
-			# Dibuja un rectangulo negro:
-			draw.rectangle((0,0, width, height), outline = 0, fill = 0)
-			display.image(image)
-			display.display()
-			print("Durmiendo...")
-	
-		time.sleep(DELAY_TIME)
+    time.sleep(DELAY_TIME)
