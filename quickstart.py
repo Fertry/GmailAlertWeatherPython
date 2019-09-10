@@ -57,6 +57,7 @@ draw.rectangle((0,0,width,height), outline = 0, fill = 0)
 # Fuente que usaremos para escribir:
 font = ImageFont.truetype("Arial.ttf", 16)
 font_email = ImageFont.truetype("Arial.ttf", 11)
+font_sky = ImageFont.truetype("Arial", 12)
 
 # Constantes:
 padding = -2
