@@ -28,8 +28,8 @@ import pyowm
 GMAIL_QUERY = "in:inbox is:unread"
 EMAIL_ADDRESS = "NUESTRO_EMAIL"
 TEXT = "Sin leer"
-DELAY_TIME = 10 
-OPEN_WEATHER_MAP_API_KEY = "API DE OPEN_WEATHER_MAP"
+DELAY_TIME = 60 
+OPEN_WEATHER_MAP_API_KEY = "NUESTRA_API"
 OPEN_WEATHER_MAP_LOCATION = "seville,es"
 OPEN_WEATHER_MAP_TEMP_SCALE = "celsius"
 
@@ -217,6 +217,13 @@ if __name__ == '__main__':
 
     if (datetime.datetime.now().hour >= 24 and datetime.datetime.now().hour <= 6):
 
+      draw.rectangle((0,0, width, height), outline = 0, fill = 0)
+      display.image(image)
+      display.display()
+      print("Durmiendo.....")
+      
+    else:
+
       try:
 
         main()
@@ -224,12 +231,5 @@ if __name__ == '__main__':
       except:
 
         print("Se encontro un error")
-
-    else:
-
-      draw.rectangle((0,0, width, height), outline = 0, fill = 0)
-      display.image(image)
-      display.display()
-      print("Durmiendo.....")
 
     time.sleep(DELAY_TIME)
