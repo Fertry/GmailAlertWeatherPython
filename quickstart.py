@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
   while True:
 
-    if (datetime.datetime.now().hour >= 24 and datetime.datetime.now().hour <= 6):
+    if (datetime.datetime.now().hour >= 0 and datetime.datetime.now().hour <= 6):
 
       draw.rectangle((0,0, width, height), outline = 0, fill = 0)
       display.image(image)
